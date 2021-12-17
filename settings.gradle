@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Forge'
+            url = 'https://maven.minecraftforge.net'
+        }
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'tracker'
+include 'tracker-common', 'tracker-forge', 'tracker-fabric'

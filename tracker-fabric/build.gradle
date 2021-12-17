@@ -1,0 +1,70 @@
+import net.fabricmc.loom.task.RemapJarTask
+
+plugins {
+    id 'fabric-loom' version '0.10-SNAPSHOT'
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+archivesBaseName = 'tracker-fabric'
+version = parent.version
+
+tasks.register('run-fabric-client') {
+    dependsOn 'runClient'
+}
+
+repositories {
+    maven { url 'https://maven.fabricmc.net/' }
+}
+
+configurations {
+    shade
+    implementation.extendsFrom shade
+}
+
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // Fabric API. This is technically optional, but you probably want it anyway.
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    shade project(':tracker-common')
+    shadow 'org.apache.logging.log4j:log4j-api:2.15.0'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-core:2.15.0'
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
+    it.options.release = 17
+}
+
+shadowJar {
+    archiveBaseName.set(project.archivesBaseName)
+    archiveClassifier.set('shadowed')
+    archiveVersion.set(project.version)
+
+    configurations = [project.configurations.shade]
+
+    exclude 'META-INF/maven/**'
+}
+
+task remappedShadowJar(type: RemapJarTask) {
+    dependsOn tasks.shadowJar
+    input = tasks.shadowJar.archiveFile
+    addNestedDependencies = true
+    archiveFileName = "${project.archivesBaseName}-${project.version}-release.jar"
+}
+

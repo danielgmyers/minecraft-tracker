@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "tracker-fabric",
+  "version": "${version}",
+
+  "name": "Tracker",
+  "description": "",
+  "authors": [],
+  "contact": {},
+
+  "license": "Apache 2.0",
+  "icon": "",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "danielgmyers.minecraft.tracker.fabric.TrackerFabric"
+    ]
+  },
+
+          "mixins": [
+      ],
+    
+  "depends": {
+    "fabricloader": ">=0.12.11",
+              "fabric": "*",
+          "minecraft": "1.18.1"
+  }
+}
