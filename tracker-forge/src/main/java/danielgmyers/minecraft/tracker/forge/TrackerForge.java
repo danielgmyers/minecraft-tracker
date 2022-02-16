@@ -1,7 +1,9 @@
-package danielgmyers.minecraft.tracker.tracker;
+package danielgmyers.minecraft.tracker.forge;
 
 import danielgmyers.minecraft.tracker.TickStatsMinuteLoggingReporter;
 import danielgmyers.minecraft.tracker.TickStatsTracker;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -44,7 +46,8 @@ public class TrackerForge {
 
     @SubscribeEvent
     public void onWorldTick(final TickEvent.WorldTickEvent event) {
-        String dimension = event.world.dimension().toString();
+
+        String dimension = event.world.dimension().location().toString();
         TickStatsTracker trackerForDimension = worldTickTracker.computeIfAbsent(dimension,
                                             (d) -> new TickStatsTracker(d, statsReporter, Clock.systemUTC()));
         if (event.phase == TickEvent.Phase.START) {
