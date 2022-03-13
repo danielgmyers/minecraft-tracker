@@ -1,6 +1,10 @@
 package danielgmyers.minecraft.tracker;
 
+import danielgmyers.minecraft.tracker.config.Config;
+import danielgmyers.minecraft.tracker.config.ReporterType;
+import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -40,18 +44,26 @@ public class TickStatsTrackerTest {
         }
     }
 
+    private static Config TEST_CONFIG;
+
+    @BeforeAll
+    public static void setup() {
+        TEST_CONFIG = new Config();
+        TEST_CONFIG.load(true, false, ReporterType.APPLICATION_LOG);
+    }
+
     @Test
     public void testInitialization() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", reporter, clock);
+        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
     }
 
     @Test
     public void testConstantTickTimesForOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", reporter, clock);
+        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
 
         // 20 ticks in 1 second allows 50ms per tick.
         // In practice, ticks often take less time than that, where the game waits a while
@@ -85,7 +97,7 @@ public class TickStatsTrackerTest {
     public void testVariableTickTimesForOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", reporter, clock);
+        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
 
         // For this test, we'll have two ticks take 5ms, sixteen ticks take 10ms,
         // and two more ticks take 15ms.
@@ -123,7 +135,7 @@ public class TickStatsTrackerTest {
     public void testEndTickBeforeStartTick() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", reporter, clock);
+        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
 
         // This shouldn't cause an exception, and the subsequent tick should have data.
         tracker.endTick();
@@ -153,7 +165,7 @@ public class TickStatsTrackerTest {
     public void testTooManyTicksInOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", reporter, clock);
+        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
 
         // For this test, we'll have each tick take 1ms, with a 1ms gap between ticks.
         // That's room for 500 ticks in one second

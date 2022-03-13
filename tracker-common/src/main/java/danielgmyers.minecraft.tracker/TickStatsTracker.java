@@ -1,5 +1,8 @@
 package danielgmyers.minecraft.tracker;
 
+import danielgmyers.minecraft.tracker.config.Config;
+import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
+import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,11 +33,13 @@ public class TickStatsTracker {
     private final long[] avgTickDurationsDuringLastMinute = new long[60];
     private final long[] maxTickDurationsDuringLastMinute = new long[60];
 
+    private final Config config;
     private final TickStatsReporter reporter;
     private final Clock clock;
 
-    public TickStatsTracker(String tickSource, TickStatsReporter reporter, Clock clock) {
+    public TickStatsTracker(String tickSource, Config config, TickStatsReporter reporter, Clock clock) {
         this.tickSource = tickSource;
+        this.config = config;
         this.reporter = reporter;
         this.clock = clock;
         LOGGER.info("Initializing tick stats tracker for source '{}'", tickSource);

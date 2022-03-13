@@ -1,6 +1,8 @@
 package danielgmyers.minecraft.tracker.fabric;
 
-import danielgmyers.minecraft.tracker.TickStatsMinuteLoggingReporter;
+import danielgmyers.minecraft.tracker.config.Config;
+import danielgmyers.minecraft.tracker.config.ReporterType;
+import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import danielgmyers.minecraft.tracker.TickStatsTracker;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -17,13 +19,10 @@ public class TrackerFabric implements ModInitializer {
     // That way, it's clear which mod wrote info, warnings, and errors.
     public static final Logger LOGGER = LogManager.getLogger("tracker-fabric");
 
-    private final TickStatsMinuteLoggingReporter statsReporter;
-    private final TickStatsTracker serverTickTracker;
+    private TickStatsTracker serverTickTracker;
     private final ConcurrentMap<String, TickStatsTracker> worldTickTracker;
 
     public TrackerFabric() {
-        this.statsReporter = new TickStatsMinuteLoggingReporter();
-        this.serverTickTracker = new TickStatsTracker("server", statsReporter, Clock.systemUTC());
         this.worldTickTracker = new ConcurrentHashMap<>();
     }
 
@@ -33,16 +32,25 @@ public class TrackerFabric implements ModInitializer {
         // However, some things (like resources) may still be uninitialized.
         // Proceed with mild caution.
 
+        Config config = new Config();
+        // TODO -- load from the actual mod config
+        config.load(true, false, ReporterType.APPLICATION_LOG);
+
+        LoggingReporter statsReporter = new LoggingReporter(config);
+        this.serverTickTracker = new TickStatsTracker("server", config, statsReporter, Clock.systemUTC());
+
         ServerTickEvents.START_SERVER_TICK.register(s -> { serverTickTracker.startTick(); });
         ServerTickEvents.END_SERVER_TICK.register(s -> { serverTickTracker.endTick(); });
         ServerTickEvents.START_WORLD_TICK.register(world -> {
             String dimension = world.getRegistryKey().getValue().toString();
-            worldTickTracker.computeIfAbsent(dimension, d -> new TickStatsTracker(d, statsReporter, Clock.systemUTC()))
+            worldTickTracker.computeIfAbsent(dimension,
+                                             d -> new TickStatsTracker(d, config, statsReporter,Clock.systemUTC()))
                     .startTick();
         });
         ServerTickEvents.END_WORLD_TICK.register(world -> {
             String dimension = world.getRegistryKey().getValue().toString();
-            worldTickTracker.computeIfAbsent(dimension, d -> new TickStatsTracker(d, statsReporter, Clock.systemUTC()))
+            worldTickTracker.computeIfAbsent(dimension,
+                                             d -> new TickStatsTracker(d, config, statsReporter, Clock.systemUTC()))
                     .endTick();
         });
     }
