@@ -13,4 +13,8 @@ pluginManagement {
 }
 
 rootProject.name = 'tracker'
-include 'tracker-common', 'tracker-forge', 'tracker-fabric'
+include (
+        'tracker-common',
+        'tracker-fabric',
+        'tracker-forge'
+)
