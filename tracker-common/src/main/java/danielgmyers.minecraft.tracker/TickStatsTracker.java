@@ -2,7 +2,6 @@ package danielgmyers.minecraft.tracker;
 
 import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
-import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -86,9 +85,11 @@ public class TickStatsTracker {
             // for now, not going to worry about the integer division losing precision.
             long avgTickDurationInLastSecond = totalTicksDuration / ticksWithData;
 
-            SecondTickStatsBlock secondStats = new SecondTickStatsBlock(tickCountThisSecond,
-                    minTickDurationInLastSecond, avgTickDurationInLastSecond, maxTickDurationInLastSecond);
-            reporter.report(tickSource, secondStats);
+            if (config.isPerSecondEnabled()) {
+                SecondTickStatsBlock secondStats = new SecondTickStatsBlock(tickCountThisSecond,
+                        minTickDurationInLastSecond, avgTickDurationInLastSecond, maxTickDurationInLastSecond);
+                reporter.report(tickSource, secondStats);
+            }
 
             if (lastMinuteSecondsCounter >= 60) {
                 LOGGER.error("{} tick tracker - We got too many seconds during the last minute!", tickSource);

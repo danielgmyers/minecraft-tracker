@@ -4,7 +4,6 @@ import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.ReporterType;
 import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -44,26 +43,20 @@ public class TickStatsTrackerTest {
         }
     }
 
-    private static Config TEST_CONFIG;
-
-    @BeforeAll
-    public static void setup() {
-        TEST_CONFIG = new Config();
-        TEST_CONFIG.load(true, false, ReporterType.APPLICATION_LOG);
-    }
-
     @Test
     public void testInitialization() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
+        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
     }
 
     @Test
     public void testConstantTickTimesForOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
+        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
 
         // 20 ticks in 1 second allows 50ms per tick.
         // In practice, ticks often take less time than that, where the game waits a while
@@ -94,10 +87,38 @@ public class TickStatsTrackerTest {
     }
 
     @Test
+    public void testRespectsPerSecondStatsConfig() {
+        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
+        Config testConfig = StaticConfig.create(false, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
+
+        // 20 ticks in 1 second allows 50ms per tick.
+        // In practice, ticks often take less time than that, where the game waits a while
+        // to start the next tick.
+
+        // For this test, we'll have each tick take 5ms, and a 45ms gap between ticks.
+        for (int i = 0; i < 20; i++) {
+            doTick(tracker, clock, 5, 45);
+        }
+
+        // we normally wouldn't have any reported stats yet, the second needs to tick over
+        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+
+        // We need to trigger another tick so the stats would emitted if they're enabled
+        tracker.startTick();
+        tracker.endTick();
+
+        // since per-second stats are disabled, we should still have no reported per-second stats.
+        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+    }
+
+    @Test
     public void testVariableTickTimesForOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
+        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
 
         // For this test, we'll have two ticks take 5ms, sixteen ticks take 10ms,
         // and two more ticks take 15ms.
@@ -135,7 +156,8 @@ public class TickStatsTrackerTest {
     public void testEndTickBeforeStartTick() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
+        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
 
         // This shouldn't cause an exception, and the subsequent tick should have data.
         tracker.endTick();
@@ -165,7 +187,8 @@ public class TickStatsTrackerTest {
     public void testTooManyTicksInOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        TickStatsTracker tracker = new TickStatsTracker("test", TEST_CONFIG, reporter, clock);
+        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
+        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
 
         // For this test, we'll have each tick take 1ms, with a 1ms gap between ticks.
         // That's room for 500 ticks in one second

@@ -1,5 +1,5 @@
 group = 'danielgmyers.minecraft.tracker'
-version = '1.0.1'
+version = '1.0.2'
 
 subprojects {
     apply plugin: 'java-library'

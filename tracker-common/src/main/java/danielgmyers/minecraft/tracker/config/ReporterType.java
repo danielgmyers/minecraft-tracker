@@ -1,16 +1,14 @@
 package danielgmyers.minecraft.tracker.config;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public enum ReporterType {
+    NONE,
     APPLICATION_LOG,
     CLOUDWATCH_DIRECT,
     CLOUDWATCH_LOGS_EMF;
 
-    public static ReporterType fromString(String str) {
-        for(ReporterType type : values()) {
-            if (type.toString().equalsIgnoreCase(str)) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Unrecognized reporter type " + str);
-    }
+    private static final Logger LOG = LogManager.getLogger();
+
 }

@@ -1,35 +1,48 @@
 package danielgmyers.minecraft.tracker.config;
 
-public class Config {
-    private boolean enabled;
-    private boolean perSecondEnabled;
-    private ReporterType reporterType;
+import java.util.EnumSet;
 
-    public Config() {
-        enabled = false;
-        perSecondEnabled = false;
-        reporterType = ReporterType.APPLICATION_LOG;
+public interface Config {
+
+    String PER_SECOND_ENABLED = "per-second-metrics-enabled";
+    Boolean PER_SECOND_ENABLED_DEFAULT = false;
+    String REPORTER_TYPE = "reporter-type";
+    ReporterType REPORTER_TYPE_DEFAULT = ReporterType.NONE;
+
+    default String retrieveConfig(String propertyName, String defaultValue) {
+        return defaultValue;
     }
 
-    public void load(boolean enabled, boolean perSecondEnabled, String reporterType) {
-        this.load(enabled, perSecondEnabled, ReporterType.fromString(reporterType));
+    default boolean retrieveBoolean(String propertyName, boolean defaultValue) {
+        String value = retrieveConfig(propertyName, null);
+        if (value == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value);
     }
 
-    public void load(boolean enabled, boolean perSecondEnabled, ReporterType reporterType) {
-        this.enabled = enabled;
-        this.perSecondEnabled = perSecondEnabled;
-        this.reporterType = reporterType;
+    default <T extends Enum> T retrieveEnumConfig(String propertyName, T defaultValue) {
+        String rawValue = retrieveConfig(propertyName, null);
+        if (rawValue == null) {
+            return defaultValue;
+        }
+        for (Object e : EnumSet.allOf(defaultValue.getClass())) {
+            if (e.toString().equalsIgnoreCase(rawValue)) {
+                return (T)e;
+            }
+        }
+        return defaultValue;
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    default boolean isEnabled() {
+        return getReporterType() != ReporterType.NONE;
     }
 
-    public boolean isPerSecondEnabled() {
-        return perSecondEnabled;
+    default boolean isPerSecondEnabled() {
+        return retrieveBoolean(PER_SECOND_ENABLED, PER_SECOND_ENABLED_DEFAULT);
     }
 
-    public ReporterType getReporterType() {
-        return reporterType;
+    default ReporterType getReporterType() {
+        return retrieveEnumConfig(REPORTER_TYPE, REPORTER_TYPE_DEFAULT);
     }
 }
