@@ -3,7 +3,7 @@ package danielgmyers.minecraft.tracker.forge;
 import danielgmyers.minecraft.tracker.TickStatsTracker;
 import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.PropertiesConfig;
-import danielgmyers.minecraft.tracker.reporters.ReporterFactory;
+import danielgmyers.minecraft.tracker.reporters.TickStatsReporterFactory;
 import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
 import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import net.minecraftforge.common.MinecraftForge;
@@ -45,7 +45,7 @@ public class TrackerForge {
             LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
         }
 
-        TickStatsReporter reporter = ReporterFactory.create(config);
+        TickStatsReporter reporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
         this.serverTickTracker = new TickStatsTracker("server", config, reporter, Clock.systemUTC());
 
         // Register ourselves for server and other game events we are interested in

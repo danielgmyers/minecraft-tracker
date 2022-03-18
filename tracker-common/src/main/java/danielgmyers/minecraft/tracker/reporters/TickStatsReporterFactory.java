@@ -6,13 +6,14 @@ import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.time.Clock;
 import java.time.Instant;
 
-public final class ReporterFactory {
+public final class TickStatsReporterFactory {
 
     private static final Logger LOG = LogManager.getLogger();
 
-    public static TickStatsReporter create(Config config) {
+    public static TickStatsReporter create(Config config, Clock clock) {
         LOG.info("Creating tick stats reporter with type {}.", config.getReporterType());
         switch(config.getReporterType()) {
             case NONE:
@@ -34,7 +35,7 @@ public final class ReporterFactory {
             case APPLICATION_LOG:
                 return new LoggingReporter(config);
             case CLOUDWATCH_DIRECT:
-                return new CloudwatchMetricsReporter(config);
+                return new CloudwatchMetricsReporter(config, clock);
             case CLOUDWATCH_LOGS_EMF:
             default:
                 throw new RuntimeException("Reporter type " + config.getReporterType() + " not implemented.");

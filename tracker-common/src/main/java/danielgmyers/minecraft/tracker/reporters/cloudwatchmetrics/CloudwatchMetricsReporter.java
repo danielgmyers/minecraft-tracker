@@ -11,8 +11,12 @@ import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataResponse;
 import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
 import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class CloudwatchMetricsReporter implements TickStatsReporter {
@@ -29,17 +33,24 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
     private static final Logger LOG = LogManager.getLogger();
     private final CloudWatchAsyncClient cw;
     private final Config config;
+    private final Clock clock;
     private final String metricNamespace;
+    private final List<MetricDatum> queuedMetrics;
 
-    public CloudwatchMetricsReporter(Config config) {
-        this(config, CloudWatchAsyncClient.create());
+    private Instant lastMetricSubmission;
+
+    public CloudwatchMetricsReporter(Config config, Clock clock) {
+        this(config, clock, CloudWatchAsyncClient.create());
     }
 
     // visible for testing
-    CloudwatchMetricsReporter(Config config, CloudWatchAsyncClient client) {
+    CloudwatchMetricsReporter(Config config, Clock clock, CloudWatchAsyncClient client) {
         this.config = config;
+        this.clock = clock;
         cw = client;
         metricNamespace = config.getCloudWatchMetricNamespace();
+        queuedMetrics = new ArrayList<>();
+        lastMetricSubmission = Instant.EPOCH;
     }
 
     @Override
@@ -73,7 +84,8 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
         tickMillis.statisticValues(buildSet(datapointCount, totalTickMillis, minTickMillis, maxTickMillis));
         tickMillis.unit(StandardUnit.MILLISECONDS);
 
-        putMetrics(tickCount.build(), tickMillis.build());
+        putMetric(tickCount.build());
+        putMetric(tickMillis.build());
     }
 
     private StatisticSet buildSet(long sampleCount, long total, long min, long max) {
@@ -85,11 +97,21 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
         return stats.build();
     }
 
-    private void putMetrics(MetricDatum... datum) {
+    // We will queue metrics for asynchronous submission.
+    // The actual API call will happen when we have accumulated 20 metrics or after one minute, whichever happens first.
+    synchronized private void putMetric(MetricDatum datum) {
+        queuedMetrics.add(datum);
+        Instant now = clock.instant();
+        final int queueSize = queuedMetrics.size();
+        LOG.debug("{} metrics queued for submission.", queueSize);
+        if (queueSize < 20 && lastMetricSubmission.isAfter(now.minus(Duration.ofMinutes(1)))) {
+            return;
+        }
+
         PutMetricDataRequest request
                 = PutMetricDataRequest.builder()
                 .namespace(metricNamespace)
-                .metricData(datum)
+                .metricData(new ArrayList<>(queuedMetrics))
                 .build();
 
         CompletableFuture<PutMetricDataResponse> response = cw.putMetricData(request);
@@ -98,8 +120,12 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
                 LOG.warn("Got an exception submitting metrics to CloudWatch", throwable);
             } else {
                 String requestId = putMetricDataResponse.responseMetadata().requestId();
-                LOG.trace("Metrics submitted. RequestId={}", requestId);
+                LOG.debug("{} metric(s) submitted. RequestId={}", queueSize, requestId);
             }
         });
+
+        lastMetricSubmission = now;
+        queuedMetrics.clear();
+        LOG.debug("Metrics queue is clear.");
     }
 }
