@@ -1,11 +1,15 @@
 package danielgmyers.minecraft.tracker.reporters;
 
-import danielgmyers.minecraft.tracker.MinuteTickStatsBlock;
-import danielgmyers.minecraft.tracker.SecondTickStatsBlock;
+import java.time.Instant;
 
 public interface TickStatsReporter {
 
-    void report(String tickSource, SecondTickStatsBlock stats);
+    void reportSecond(String tickSource, Instant timestamp,
+                      long tickCount, long totalTickMillis, long minTickMillis, long maxTickMillis);
 
-    void report(String tickSource, MinuteTickStatsBlock stats);
+    // we need to know how many seconds we have datapoints for, because if a tick took (for example) two seconds,
+    // then we won't get data for that second.
+    void reportMinute(String tickSource, Instant timestamp, long datapointCount,
+                      long totalTickCount, long minTickCount, long maxTickCount,
+                      long totalTickMillis, long minTickMillis, long maxTickMillis);
 }

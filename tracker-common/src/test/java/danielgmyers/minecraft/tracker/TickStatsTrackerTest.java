@@ -14,32 +14,83 @@ import java.util.List;
 
 public class TickStatsTrackerTest {
 
-    private class InMemoryTickStatsReporter implements TickStatsReporter {
+    private static class SecondStatsBlock {
+        public final String tickSource;
+        public final Instant timestamp;
+        public final long tickCount;
+        public final long totalTickMillis;
+        public final long minTickMillis;
+        public final long maxTickMillis;
 
-        private List<SecondTickStatsBlock> secondBlocks = new ArrayList<>();
-        private List<MinuteTickStatsBlock> minuteBlocks = new ArrayList<>();
-
-        @Override
-        public void report(String tickSource, SecondTickStatsBlock stats) {
-            this.secondBlocks.add(stats);
+        public SecondStatsBlock(String tickSource, Instant timestamp, long tickCount,
+                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
+            this.tickSource = tickSource;
+            this.timestamp = timestamp;
+            this.tickCount = tickCount;
+            this.totalTickMillis = totalTickMillis;
+            this.minTickMillis = minTickMillis;
+            this.maxTickMillis = maxTickMillis;
         }
+    }
 
-        @Override
-        public void report(String tickSource, MinuteTickStatsBlock stats) {
-            this.minuteBlocks.add(stats);
+    private static class MinuteStatsBlock {
+        public final String tickSource;
+        public final Instant timestamp;
+        public final long datapointCount;
+        public final long totalTickCount;
+        public final long minTickCount;
+        public final long maxTickCount;
+        public final long totalTickMillis;
+        public final long minTickMillis;
+        public final long maxTickMillis;
+
+        public MinuteStatsBlock(String tickSource, Instant timestamp, long datapointCount,
+                                long totalTickCount, long minTickCount, long maxTickCount,
+                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
+            this.tickSource = tickSource;
+            this.timestamp = timestamp;
+            this.datapointCount = datapointCount;
+            this.totalTickCount = totalTickCount;
+            this.minTickCount = minTickCount;
+            this.maxTickCount = maxTickCount;
+            this.totalTickMillis = totalTickMillis;
+            this.minTickMillis = minTickMillis;
+            this.maxTickMillis = maxTickMillis;
         }
+    }
+
+    private static class InMemoryTickStatsReporter implements TickStatsReporter {
+
+        private final List<SecondStatsBlock> secondBlocks = new ArrayList<>();
+        private final List<MinuteStatsBlock> minuteBlocks = new ArrayList<>();
 
         public void clear() {
             secondBlocks.clear();
             minuteBlocks.clear();
         }
 
-        public List<SecondTickStatsBlock> getSecondBlocks() {
+        public List<SecondStatsBlock> getSecondBlocks() {
             return secondBlocks;
         }
 
-        public List<MinuteTickStatsBlock> getMinuteBlocks() {
+        public List<MinuteStatsBlock> getMinuteBlocks() {
             return minuteBlocks;
+        }
+
+        @Override
+        public void reportSecond(String tickSource, Instant timestamp, long tickCount,
+                                 long totalTickMillis, long minTickMillis, long maxTickMillis) {
+            secondBlocks.add(new SecondStatsBlock(tickSource, timestamp, tickCount,
+                                                  totalTickMillis, minTickMillis, maxTickMillis));
+        }
+
+        @Override
+        public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
+                                 long totalTickCount, long minTickCount, long maxTickCount,
+                                 long totalTickMillis, long minTickMillis, long maxTickMillis) {
+            minuteBlocks.add(new MinuteStatsBlock(tickSource, timestamp, datapointCount,
+                                                  totalTickCount, minTickCount, maxTickCount,
+                                                  totalTickMillis, minTickMillis, maxTickMillis));
         }
     }
 
@@ -78,12 +129,12 @@ public class TickStatsTrackerTest {
         Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
 
         Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondBlocks().get(0);
+        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
 
-        Assertions.assertEquals(20, block.getTickCount());
-        Assertions.assertEquals(5, block.getMinTickMillis());
-        Assertions.assertEquals(5, block.getAvgTickMillis());
-        Assertions.assertEquals(5, block.getMaxTickMillis());
+        Assertions.assertEquals(20, block.tickCount);
+        Assertions.assertEquals(5, block.minTickMillis);
+        Assertions.assertEquals(20 * 5, block.totalTickMillis);
+        Assertions.assertEquals(5, block.maxTickMillis);
     }
 
     @Test
@@ -122,15 +173,18 @@ public class TickStatsTrackerTest {
 
         // For this test, we'll have two ticks take 5ms, sixteen ticks take 10ms,
         // and two more ticks take 15ms.
-        // The average should be 10, min and max should be 5 and 15, respectively.
+        int totalTickTime = 0;
         for (int i = 0; i < 2; i++) {
             doTick(tracker, clock, 5, 45);
+            totalTickTime += 5;
         }
         for (int i = 0; i < 16; i++) {
             doTick(tracker, clock, 10, 40);
+            totalTickTime += 10;
         }
         for (int i = 0; i < 2; i++) {
             doTick(tracker, clock, 15, 35);
+            totalTickTime += 15;
         }
 
         // we shouldn't have any reported stats yet, the second needs to tick over
@@ -144,12 +198,12 @@ public class TickStatsTrackerTest {
         Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
 
         Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondBlocks().get(0);
+        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
 
-        Assertions.assertEquals(20, block.getTickCount());
-        Assertions.assertEquals(5, block.getMinTickMillis());
-        Assertions.assertEquals(10, block.getAvgTickMillis());
-        Assertions.assertEquals(15, block.getMaxTickMillis());
+        Assertions.assertEquals(20, block.tickCount);
+        Assertions.assertEquals(5, block.minTickMillis);
+        Assertions.assertEquals(totalTickTime, block.totalTickMillis);
+        Assertions.assertEquals(15, block.maxTickMillis);
     }
 
     @Test
@@ -174,17 +228,17 @@ public class TickStatsTrackerTest {
         Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
 
         Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondBlocks().get(0);
+        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
 
         // we should only have one data point for that second, a zero-second tick.
-        Assertions.assertEquals(1, block.getTickCount());
-        Assertions.assertEquals(0, block.getMinTickMillis());
-        Assertions.assertEquals(0, block.getAvgTickMillis());
-        Assertions.assertEquals(0, block.getMaxTickMillis());
+        Assertions.assertEquals(1, block.tickCount);
+        Assertions.assertEquals(0, block.minTickMillis);
+        Assertions.assertEquals(0, block.totalTickMillis);
+        Assertions.assertEquals(0, block.maxTickMillis);
     }
 
     @Test
-    public void testTooManyTicksInOneSecond() {
+    public void testManyTicksInOneSecond() {
         InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
@@ -192,9 +246,9 @@ public class TickStatsTrackerTest {
 
         // For this test, we'll have each tick take 1ms, with a 1ms gap between ticks.
         // That's room for 500 ticks in one second
-        // This simulates the game running way too many ticks.
-        Assertions.assertTrue(TickStatsTracker.MAX_TICKS * 2 < 500);
-        for (int i = 0; i < TickStatsTracker.MAX_TICKS * 2; i++) {
+        // This simulates the game running significantly more ticks than usual.
+        long tickCount = 400;
+        for (int i = 0; i < tickCount; i++) {
             doTick(tracker, clock, 1, 1);
         }
 
@@ -210,15 +264,12 @@ public class TickStatsTrackerTest {
         Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
 
         Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondBlocks().get(0);
+        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
 
-        // strictly speaking, the implementation doesn't need to include data
-        // for the overflow ticks in the duration metrics, only the first TickStatsTracker.MAX_TICKS,
-        // but we're testing with constant-time ticks, so it makes no difference.
-        Assertions.assertEquals(TickStatsTracker.MAX_TICKS * 2, block.getTickCount());
-        Assertions.assertEquals(1, block.getMinTickMillis());
-        Assertions.assertEquals(1, block.getAvgTickMillis());
-        Assertions.assertEquals(1, block.getMaxTickMillis());
+        Assertions.assertEquals(tickCount, block.tickCount);
+        Assertions.assertEquals(1, block.minTickMillis);
+        Assertions.assertEquals(400, block.totalTickMillis);
+        Assertions.assertEquals(1, block.maxTickMillis);
     }
 
     private void doTick(TickStatsTracker tracker, TestClock clock, long tickMillis, long postTickWaitMillis) {

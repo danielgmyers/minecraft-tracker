@@ -9,6 +9,9 @@ public interface Config {
     String REPORTER_TYPE = "reporter-type";
     ReporterType REPORTER_TYPE_DEFAULT = ReporterType.NONE;
 
+    String CLOUDWATCH_METRIC_NAMESPACE = "cloudwatch-metric-namespace";
+    String CLOUDWATCH_METRIC_NAMESPACE_DEFAULT = "minecraft-tracker";
+
     default String retrieveConfig(String propertyName, String defaultValue) {
         return defaultValue;
     }
@@ -44,5 +47,9 @@ public interface Config {
 
     default ReporterType getReporterType() {
         return retrieveEnumConfig(REPORTER_TYPE, REPORTER_TYPE_DEFAULT);
+    }
+
+    default String getCloudWatchMetricNamespace() {
+        return retrieveConfig(CLOUDWATCH_METRIC_NAMESPACE, CLOUDWATCH_METRIC_NAMESPACE_DEFAULT);
     }
 }

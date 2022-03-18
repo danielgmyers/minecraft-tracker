@@ -1,11 +1,12 @@
 package danielgmyers.minecraft.tracker.reporters;
 
-import danielgmyers.minecraft.tracker.MinuteTickStatsBlock;
-import danielgmyers.minecraft.tracker.SecondTickStatsBlock;
 import danielgmyers.minecraft.tracker.config.Config;
+import danielgmyers.minecraft.tracker.reporters.cloudwatchmetrics.CloudwatchMetricsReporter;
 import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.time.Instant;
 
 public final class ReporterFactory {
 
@@ -18,21 +19,25 @@ public final class ReporterFactory {
                 // we'll hand back a no-op reporter in this case.
                 return new TickStatsReporter() {
                     @Override
-                    public void report(String tickSource, SecondTickStatsBlock stats) {
+                    public void reportSecond(String tickSource, Instant timestamp, long tickCount,
+                                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
 
                     }
 
                     @Override
-                    public void report(String tickSource, MinuteTickStatsBlock stats) {
+                    public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
+                                             long totalTickCount, long minTickCount, long maxTickCount,
+                                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
 
                     }
                 };
             case APPLICATION_LOG:
                 return new LoggingReporter(config);
             case CLOUDWATCH_DIRECT:
+                return new CloudwatchMetricsReporter(config);
             case CLOUDWATCH_LOGS_EMF:
             default:
-                throw new RuntimeException("Unknown reporter type: " + config.getReporterType().toString());
+                throw new RuntimeException("Reporter type " + config.getReporterType() + " not implemented.");
         }
     }
 }

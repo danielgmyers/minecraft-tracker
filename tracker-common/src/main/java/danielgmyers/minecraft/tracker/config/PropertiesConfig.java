@@ -15,17 +15,15 @@ public class PropertiesConfig implements Config {
 
     private static final Logger LOG = LogManager.getLogger();
 
-    private File configFile;
-    private Properties properties;
+    private final Properties properties;
 
-    private PropertiesConfig(File configFile) {
-        this.configFile = configFile;
+    private PropertiesConfig() {
         this.properties = new Properties();
     }
 
     public static PropertiesConfig create(Path configPath) {
         File configFile = configPath.toFile();
-        PropertiesConfig config = new PropertiesConfig(configFile);
+        PropertiesConfig config = new PropertiesConfig();
 
         if (!configFile.exists()) {
             config.saveDefaults(configFile);
@@ -40,6 +38,7 @@ public class PropertiesConfig implements Config {
         properties.clear();
         properties.setProperty(PER_SECOND_ENABLED, PER_SECOND_ENABLED_DEFAULT.toString());
         properties.setProperty(REPORTER_TYPE, REPORTER_TYPE_DEFAULT.toString());
+        properties.setProperty(CLOUDWATCH_METRIC_NAMESPACE, CLOUDWATCH_METRIC_NAMESPACE_DEFAULT);
         try (FileWriter writer = new FileWriter(configFile)) {
             properties.store(writer, "Default configuration for tracker.");
         } catch (IOException e) {
