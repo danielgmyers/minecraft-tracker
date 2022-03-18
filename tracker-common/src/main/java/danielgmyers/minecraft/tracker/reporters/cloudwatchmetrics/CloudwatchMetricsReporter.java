@@ -81,7 +81,8 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
         tickMillis.storageResolution(MINUTE_STORAGE_RESOLUTION);
         tickMillis.timestamp(timestampTruncated);
         tickMillis.metricName(tickSource + MINUTE + TICK_MILLIS);
-        tickMillis.statisticValues(buildSet(datapointCount, totalTickMillis, minTickMillis, maxTickMillis));
+        // we use totalTickCount instead of datapointCount because average totalTickMillis is divided among all ticks.
+        tickMillis.statisticValues(buildSet(totalTickCount, totalTickMillis, minTickMillis, maxTickMillis));
         tickMillis.unit(StandardUnit.MILLISECONDS);
 
         putMetric(tickCount.build());

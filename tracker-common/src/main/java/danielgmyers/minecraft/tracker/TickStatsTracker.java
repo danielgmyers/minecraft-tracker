@@ -22,6 +22,7 @@ public class TickStatsTracker {
     private long minTickMillisThisSecond = Long.MAX_VALUE;
     private long maxTickMillisThisSecond = 0;
 
+    private long secondsMeasuredThisMinute = 0;
     private long totalTickCountThisMinute = 0;
     private long minTickCountThisMinute = Long.MAX_VALUE;
     private long maxTickCountThisMinute = 0;
@@ -74,6 +75,7 @@ public class TickStatsTracker {
                                       totalTickMillisThisSecond, minTickMillisThisSecond, maxTickMillisThisSecond);
             }
 
+            secondsMeasuredThisMinute++;
             totalTickCountThisMinute += tickCountThisSecond;
             minTickCountThisMinute = Math.min(minTickCountThisMinute, tickCountThisSecond);
             maxTickCountThisMinute = Math.max(maxTickCountThisMinute, tickCountThisSecond);
@@ -88,9 +90,11 @@ public class TickStatsTracker {
             maxTickMillisThisSecond = 0;
 
             if (inNextMinute(previousTickStartTimeMillis, currentTickStartTimeMillis)) {
-                reporter.reportMinute(tickSource, now, totalTickCountThisMinute,
+                reporter.reportMinute(tickSource, now, secondsMeasuredThisMinute,
                                       totalTickCountThisMinute, minTickCountThisMinute, maxTickCountThisMinute,
                                       totalTickMillisThisMinute, minTickMillisThisMinute, maxTickMillisThisMinute);
+
+                secondsMeasuredThisMinute = 0;
 
                 totalTickCountThisMinute = 0;
                 minTickCountThisMinute = Long.MAX_VALUE;
