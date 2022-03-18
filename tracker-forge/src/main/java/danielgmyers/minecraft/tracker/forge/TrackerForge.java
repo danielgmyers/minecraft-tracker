@@ -70,8 +70,10 @@ public class TrackerForge {
     public void onWorldTick(final TickEvent.WorldTickEvent event) {
         String dimension = event.world.dimension().location().toString();
         TickStatsTracker trackerForDimension = worldTickTracker.computeIfAbsent(dimension,
-                                            (d) -> new TickStatsTracker(d, config, new LoggingReporter(config),
-                                                                        Clock.systemUTC()));
+                    (d) -> {
+                        TickStatsReporter reporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
+                        return new TickStatsTracker(d, config, reporter, Clock.systemUTC());
+                    });
         if (event.phase == TickEvent.Phase.START) {
             trackerForDimension.startTick();
         } else {

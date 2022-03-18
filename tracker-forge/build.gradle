@@ -121,7 +121,12 @@ shadowJar {
     exclude 'META-INF/maven/**'
 
     dependencies {
+        exclude(dependency('commons-codec::'))
+        exclude(dependency('commons-logging::'))
+        exclude(dependency('io.netty::'))
+        exclude(dependency('org.apache.httpcomponents::'))
         exclude(dependency('org.apache.logging.log4j::'))
+        exclude(dependency('org.slf4j::'))
     }
 }
 
