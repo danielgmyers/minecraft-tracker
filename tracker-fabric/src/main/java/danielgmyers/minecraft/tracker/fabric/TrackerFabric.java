@@ -55,7 +55,7 @@ public class TrackerFabric implements ModInitializer {
         ServerTickEvents.START_WORLD_TICK.register(world -> {
             String dimension = world.getRegistryKey().getValue().toString();
             worldTickTracker.computeIfAbsent(dimension,
-                                             d -> new TickStatsTracker(d, config, reporter,Clock.systemUTC()))
+                                             d -> new TickStatsTracker(d, config, reporter, Clock.systemUTC()))
                     .startTick();
         });
         ServerTickEvents.END_WORLD_TICK.register(world -> {

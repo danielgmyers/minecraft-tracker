@@ -5,7 +5,6 @@ import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.PropertiesConfig;
 import danielgmyers.minecraft.tracker.reporters.TickStatsReporterFactory;
 import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
-import danielgmyers.minecraft.tracker.reporters.logging.LoggingReporter;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -27,6 +26,7 @@ public class TrackerForge {
     private static final Logger LOGGER = LogManager.getLogger("tracker_forge");
 
     private Config config;
+    private TickStatsReporter statsReporter;
     private TickStatsTracker serverTickTracker;
     private final ConcurrentMap<String, TickStatsTracker> worldTickTracker;
 
@@ -45,8 +45,8 @@ public class TrackerForge {
             LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
         }
 
-        TickStatsReporter reporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
-        this.serverTickTracker = new TickStatsTracker("server", config, reporter, Clock.systemUTC());
+        statsReporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
+        this.serverTickTracker = new TickStatsTracker("server", config, statsReporter, Clock.systemUTC());
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
@@ -70,10 +70,7 @@ public class TrackerForge {
     public void onWorldTick(final TickEvent.WorldTickEvent event) {
         String dimension = event.world.dimension().location().toString();
         TickStatsTracker trackerForDimension = worldTickTracker.computeIfAbsent(dimension,
-                    (d) -> {
-                        TickStatsReporter reporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
-                        return new TickStatsTracker(d, config, reporter, Clock.systemUTC());
-                    });
+                    (d) -> new TickStatsTracker(d, config, statsReporter, Clock.systemUTC()));
         if (event.phase == TickEvent.Phase.START) {
             trackerForDimension.startTick();
         } else {
