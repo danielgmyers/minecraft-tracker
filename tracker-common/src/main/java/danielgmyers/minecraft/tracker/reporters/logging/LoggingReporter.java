@@ -1,13 +1,13 @@
 package danielgmyers.minecraft.tracker.reporters.logging;
 
 import danielgmyers.minecraft.tracker.config.Config;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
+import danielgmyers.minecraft.tracker.reporters.StatsReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.time.Instant;
 
-public class LoggingReporter implements TickStatsReporter {
+public class LoggingReporter implements StatsReporter {
 
     private static final Logger LOG = LogManager.getLogger();
     private final Config config;
@@ -36,5 +36,13 @@ public class LoggingReporter implements TickStatsReporter {
                  tickSource, datapointCount,
                  minTickCount, avgTickCount, maxTickCount,
                  minTickMillis, avgTickMillis, maxTickMillis);
+    }
+
+    @Override
+    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+                                  long playerCountSum, long minPlayerCount, long maxPlayerCount) {
+        long avgPlayerCount = playerCountSum / datapointCount;
+        LOG.info("Last minute {} player counts: {} data points. {} (min), {} (avg), {} (max).",
+                 tickSource, datapointCount, minPlayerCount, avgPlayerCount, maxPlayerCount);
     }
 }

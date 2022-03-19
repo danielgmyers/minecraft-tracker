@@ -1,15 +1,17 @@
 package danielgmyers.minecraft.tracker.forge;
 
+import danielgmyers.minecraft.tracker.PlayerCountTracker;
 import danielgmyers.minecraft.tracker.TickStatsTracker;
 import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.PropertiesConfig;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporterFactory;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
+import danielgmyers.minecraft.tracker.reporters.StatsReporterFactory;
+import danielgmyers.minecraft.tracker.reporters.StatsReporter;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,12 +28,15 @@ public class TrackerForge {
     private static final Logger LOGGER = LogManager.getLogger("tracker_forge");
 
     private Config config;
-    private TickStatsReporter statsReporter;
+    private StatsReporter statsReporter;
     private TickStatsTracker serverTickTracker;
     private final ConcurrentMap<String, TickStatsTracker> worldTickTracker;
+    private PlayerCountTracker playerCountTracker;
+    private final ConcurrentMap<String, PlayerCountTracker> worldPlayerCountTracker;
 
     public TrackerForge() {
         this.worldTickTracker = new ConcurrentHashMap<>();
+        this.worldPlayerCountTracker = new ConcurrentHashMap<>();
 
         Path configPath = FMLPaths.CONFIGDIR.get().resolve("tracker.properties");
         config = PropertiesConfig.create(configPath);
@@ -45,11 +50,13 @@ public class TrackerForge {
             LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
         }
 
-        statsReporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
+        statsReporter = StatsReporterFactory.create(config, Clock.systemUTC());
         this.serverTickTracker = new TickStatsTracker("server", config, statsReporter, Clock.systemUTC());
+        this.playerCountTracker = new PlayerCountTracker("server", config, statsReporter, Clock.systemUTC());
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+
     }
 
     @SubscribeEvent
@@ -63,6 +70,7 @@ public class TrackerForge {
             serverTickTracker.startTick();
         } else {
             serverTickTracker.endTick();
+            playerCountTracker.update(ServerLifecycleHooks.getCurrentServer().getPlayerCount());
         }
     }
 
@@ -75,6 +83,10 @@ public class TrackerForge {
             trackerForDimension.startTick();
         } else {
             trackerForDimension.endTick();
+
+            PlayerCountTracker playerCountTracker = worldPlayerCountTracker.computeIfAbsent(dimension,
+                    (d) -> new PlayerCountTracker(d, config, statsReporter, Clock.systemUTC()));
+            playerCountTracker.update(event.world.players().size());
         }
     }
 }

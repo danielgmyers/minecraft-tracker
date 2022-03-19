@@ -9,16 +9,16 @@ import org.apache.logging.log4j.Logger;
 import java.time.Clock;
 import java.time.Instant;
 
-public final class TickStatsReporterFactory {
+public final class StatsReporterFactory {
 
     private static final Logger LOG = LogManager.getLogger();
 
-    public static TickStatsReporter create(Config config, Clock clock) {
+    public static StatsReporter create(Config config, Clock clock) {
         LOG.info("Creating tick stats reporter with type {}.", config.getReporterType());
         switch(config.getReporterType()) {
             case NONE:
                 // we'll hand back a no-op reporter in this case.
-                return new TickStatsReporter() {
+                return new StatsReporter() {
                     @Override
                     public void reportSecond(String tickSource, Instant timestamp, long tickCount,
                                              long totalTickMillis, long minTickMillis, long maxTickMillis) {
@@ -29,6 +29,12 @@ public final class TickStatsReporterFactory {
                     public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
                                              long totalTickCount, long minTickCount, long maxTickCount,
                                              long totalTickMillis, long minTickMillis, long maxTickMillis) {
+
+                    }
+
+                    @Override
+                    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+                                                  long playerCountSum, long minPlayerCount, long maxPlayerCount) {
 
                     }
                 };

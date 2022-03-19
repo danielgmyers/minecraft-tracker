@@ -2,101 +2,18 @@ package danielgmyers.minecraft.tracker;
 
 import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.ReporterType;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoField;
-import java.util.ArrayList;
-import java.util.List;
 
 public class TickStatsTrackerTest {
 
-    private static class SecondStatsBlock {
-        public final String tickSource;
-        public final Instant timestamp;
-        public final long tickCount;
-        public final long totalTickMillis;
-        public final long minTickMillis;
-        public final long maxTickMillis;
-
-        public SecondStatsBlock(String tickSource, Instant timestamp, long tickCount,
-                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
-            this.tickSource = tickSource;
-            this.timestamp = timestamp;
-            this.tickCount = tickCount;
-            this.totalTickMillis = totalTickMillis;
-            this.minTickMillis = minTickMillis;
-            this.maxTickMillis = maxTickMillis;
-        }
-    }
-
-    private static class MinuteStatsBlock {
-        public final String tickSource;
-        public final Instant timestamp;
-        public final long datapointCount;
-        public final long totalTickCount;
-        public final long minTickCount;
-        public final long maxTickCount;
-        public final long totalTickMillis;
-        public final long minTickMillis;
-        public final long maxTickMillis;
-
-        public MinuteStatsBlock(String tickSource, Instant timestamp, long datapointCount,
-                                long totalTickCount, long minTickCount, long maxTickCount,
-                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
-            this.tickSource = tickSource;
-            this.timestamp = timestamp;
-            this.datapointCount = datapointCount;
-            this.totalTickCount = totalTickCount;
-            this.minTickCount = minTickCount;
-            this.maxTickCount = maxTickCount;
-            this.totalTickMillis = totalTickMillis;
-            this.minTickMillis = minTickMillis;
-            this.maxTickMillis = maxTickMillis;
-        }
-    }
-
-    private static class InMemoryTickStatsReporter implements TickStatsReporter {
-
-        private final List<SecondStatsBlock> secondBlocks = new ArrayList<>();
-        private final List<MinuteStatsBlock> minuteBlocks = new ArrayList<>();
-
-        public void clear() {
-            secondBlocks.clear();
-            minuteBlocks.clear();
-        }
-
-        public List<SecondStatsBlock> getSecondBlocks() {
-            return secondBlocks;
-        }
-
-        public List<MinuteStatsBlock> getMinuteBlocks() {
-            return minuteBlocks;
-        }
-
-        @Override
-        public void reportSecond(String tickSource, Instant timestamp, long tickCount,
-                                 long totalTickMillis, long minTickMillis, long maxTickMillis) {
-            secondBlocks.add(new SecondStatsBlock(tickSource, timestamp, tickCount,
-                                                  totalTickMillis, minTickMillis, maxTickMillis));
-        }
-
-        @Override
-        public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
-                                 long totalTickCount, long minTickCount, long maxTickCount,
-                                 long totalTickMillis, long minTickMillis, long maxTickMillis) {
-            minuteBlocks.add(new MinuteStatsBlock(tickSource, timestamp, datapointCount,
-                                                  totalTickCount, minTickCount, maxTickCount,
-                                                  totalTickMillis, minTickMillis, maxTickMillis));
-        }
-    }
-
     @Test
     public void testInitialization() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -104,7 +21,7 @@ public class TickStatsTrackerTest {
 
     @Test
     public void testConstantTickTimesForOneSecond() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -119,17 +36,17 @@ public class TickStatsTrackerTest {
         }
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         tracker.startTick();
         tracker.endTick();
 
         // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
+        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
 
         Assertions.assertEquals(20, block.tickCount);
         Assertions.assertEquals(5, block.minTickMillis);
@@ -139,7 +56,7 @@ public class TickStatsTrackerTest {
 
     @Test
     public void testRespectsPerSecondStatsConfig() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(false, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -154,19 +71,19 @@ public class TickStatsTrackerTest {
         }
 
         // we normally wouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
 
         // We need to trigger another tick so the stats would emitted if they're enabled
         tracker.startTick();
         tracker.endTick();
 
         // since per-second stats are disabled, we should still have no reported per-second stats.
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
     }
 
     @Test
     public void testVariableTickTimesForOneSecond() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -188,17 +105,17 @@ public class TickStatsTrackerTest {
         }
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         tracker.startTick();
         tracker.endTick();
 
         // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
+        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
 
         Assertions.assertEquals(20, block.tickCount);
         Assertions.assertEquals(5, block.minTickMillis);
@@ -208,7 +125,7 @@ public class TickStatsTrackerTest {
 
     @Test
     public void testEndTickBeforeStartTick() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -217,7 +134,7 @@ public class TickStatsTrackerTest {
         tracker.endTick();
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         clock.forward(Duration.ofSeconds(1));
@@ -225,10 +142,10 @@ public class TickStatsTrackerTest {
         tracker.endTick();
 
         // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
+        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
 
         // we should only have one data point for that second, a zero-second tick.
         Assertions.assertEquals(1, block.tickCount);
@@ -239,7 +156,7 @@ public class TickStatsTrackerTest {
 
     @Test
     public void testManyTicksInOneSecond() {
-        InMemoryTickStatsReporter reporter = new InMemoryTickStatsReporter();
+        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
         TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
         Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
         TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
@@ -253,7 +170,7 @@ public class TickStatsTrackerTest {
         }
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         clock.forward(Duration.ofSeconds(1));
@@ -261,10 +178,10 @@ public class TickStatsTrackerTest {
         tracker.endTick();
 
         // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondBlocks().isEmpty());
+        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondBlocks().size());
-        SecondStatsBlock block = reporter.getSecondBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
+        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
 
         Assertions.assertEquals(tickCount, block.tickCount);
         Assertions.assertEquals(1, block.minTickMillis);

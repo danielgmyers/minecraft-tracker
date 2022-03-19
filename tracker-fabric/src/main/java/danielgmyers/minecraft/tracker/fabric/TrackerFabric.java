@@ -1,9 +1,10 @@
 package danielgmyers.minecraft.tracker.fabric;
 
+import danielgmyers.minecraft.tracker.PlayerCountTracker;
 import danielgmyers.minecraft.tracker.config.Config;
 import danielgmyers.minecraft.tracker.config.PropertiesConfig;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporterFactory;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
+import danielgmyers.minecraft.tracker.reporters.StatsReporterFactory;
+import danielgmyers.minecraft.tracker.reporters.StatsReporter;
 import danielgmyers.minecraft.tracker.TickStatsTracker;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -24,9 +25,12 @@ public class TrackerFabric implements ModInitializer {
 
     private TickStatsTracker serverTickTracker;
     private final ConcurrentMap<String, TickStatsTracker> worldTickTracker;
+    private PlayerCountTracker playerCountTracker;
+    private final ConcurrentMap<String, PlayerCountTracker> worldPlayerCountTracker;
 
     public TrackerFabric() {
         this.worldTickTracker = new ConcurrentHashMap<>();
+        this.worldPlayerCountTracker = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -34,7 +38,6 @@ public class TrackerFabric implements ModInitializer {
         // This code runs as soon as Minecraft is in a mod-load-ready state.
         // However, some things (like resources) may still be uninitialized.
         // Proceed with mild caution.
-
         Path configPath = FabricLoader.getInstance().getConfigDir().resolve("tracker.properties");
         Config config = PropertiesConfig.create(configPath);
 
@@ -47,11 +50,15 @@ public class TrackerFabric implements ModInitializer {
             LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
         }
 
-        TickStatsReporter reporter = TickStatsReporterFactory.create(config, Clock.systemUTC());
+        StatsReporter reporter = StatsReporterFactory.create(config, Clock.systemUTC());
         this.serverTickTracker = new TickStatsTracker("server", config, reporter, Clock.systemUTC());
+        this.playerCountTracker = new PlayerCountTracker("server", config, reporter, Clock.systemUTC());
 
         ServerTickEvents.START_SERVER_TICK.register(s -> { serverTickTracker.startTick(); });
-        ServerTickEvents.END_SERVER_TICK.register(s -> { serverTickTracker.endTick(); });
+        ServerTickEvents.END_SERVER_TICK.register(s -> {
+            serverTickTracker.endTick();
+            playerCountTracker.update(s.getCurrentPlayerCount());
+        });
         ServerTickEvents.START_WORLD_TICK.register(world -> {
             String dimension = world.getRegistryKey().getValue().toString();
             worldTickTracker.computeIfAbsent(dimension,
@@ -63,6 +70,9 @@ public class TrackerFabric implements ModInitializer {
             worldTickTracker.computeIfAbsent(dimension,
                                              d -> new TickStatsTracker(d, config, reporter, Clock.systemUTC()))
                     .endTick();
+            worldPlayerCountTracker.computeIfAbsent(dimension,
+                                                    d -> new PlayerCountTracker(d, config, reporter, Clock.systemUTC()))
+                    .update(world.getPlayers().size());
         });
     }
 

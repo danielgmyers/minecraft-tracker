@@ -2,7 +2,7 @@ package danielgmyers.minecraft.tracker.reporters;
 
 import java.time.Instant;
 
-public interface TickStatsReporter {
+public interface StatsReporter {
 
     void reportSecond(String tickSource, Instant timestamp,
                       long tickCount, long totalTickMillis, long minTickMillis, long maxTickMillis);
@@ -12,4 +12,7 @@ public interface TickStatsReporter {
     void reportMinute(String tickSource, Instant timestamp, long datapointCount,
                       long totalTickCount, long minTickCount, long maxTickCount,
                       long totalTickMillis, long minTickMillis, long maxTickMillis);
+
+    void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+                           long playerCountSum, long minPlayerCount, long maxPlayerCount);
 }

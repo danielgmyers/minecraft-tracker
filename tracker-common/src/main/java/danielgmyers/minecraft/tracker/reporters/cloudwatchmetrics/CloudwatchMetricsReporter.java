@@ -1,7 +1,7 @@
 package danielgmyers.minecraft.tracker.reporters.cloudwatchmetrics;
 
 import danielgmyers.minecraft.tracker.config.Config;
-import danielgmyers.minecraft.tracker.reporters.TickStatsReporter;
+import danielgmyers.minecraft.tracker.reporters.StatsReporter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
@@ -19,13 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class CloudwatchMetricsReporter implements TickStatsReporter {
+public class CloudwatchMetricsReporter implements StatsReporter {
 
     // visible for testing
     static final String SECOND = ".second.";
     static final String MINUTE = ".minute.";
     static final String TICK_COUNT = "tick-count";
     static final String TICK_MILLIS = "tick-millis";
+    static final String PLAYER_COUNT = "player-count";
 
     static final int SECOND_STORAGE_RESOLUTION = 1;
     static final int MINUTE_STORAGE_RESOLUTION = 60;
@@ -87,6 +88,22 @@ public class CloudwatchMetricsReporter implements TickStatsReporter {
 
         putMetric(tickCount.build());
         putMetric(tickMillis.build());
+    }
+
+    @Override
+    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+                                  long playerCountSum, long minPlayerCount, long maxPlayerCount) {
+        // The CloudWatch SDK is not nice enough to do this for us.
+        Instant timestampTruncated = timestamp.truncatedTo(ChronoUnit.MILLIS);
+
+        MetricDatum.Builder playerCount = MetricDatum.builder();
+        playerCount.storageResolution(MINUTE_STORAGE_RESOLUTION);
+        playerCount.timestamp(timestampTruncated);
+        playerCount.metricName(tickSource + MINUTE + PLAYER_COUNT);
+        playerCount.statisticValues(buildSet(datapointCount, playerCountSum, minPlayerCount, maxPlayerCount));
+        playerCount.unit(StandardUnit.COUNT);
+
+        putMetric(playerCount.build());
     }
 
     private StatisticSet buildSet(long sampleCount, long total, long min, long max) {
