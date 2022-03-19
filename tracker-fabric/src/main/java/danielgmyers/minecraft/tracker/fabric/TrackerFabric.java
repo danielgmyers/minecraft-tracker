@@ -46,10 +46,6 @@ public class TrackerFabric implements ModInitializer {
             return;
         }
 
-        if (config.isPerSecondEnabled()) {
-            LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
-        }
-
         StatsReporter reporter = StatsReporterFactory.create(config, Clock.systemUTC());
         this.serverTickTracker = new TickStatsTracker("server", config, reporter, Clock.systemUTC());
         this.playerCountTracker = new PlayerCountTracker("server", config, reporter, Clock.systemUTC());

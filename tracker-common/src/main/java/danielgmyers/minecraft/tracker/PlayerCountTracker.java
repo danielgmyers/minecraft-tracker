@@ -45,14 +45,8 @@ public class PlayerCountTracker {
             return;
         }
 
-        // Yes, it's weird to sum up the player counts for each data point, but this gives us a proper average over
-        // the minute when we generate per-minute statistics.
-        lastMinuteDatapointSum += playerCount;
-        lastMinuteDatapointMin = Math.min(lastMinuteDatapointMin, playerCount);
-        lastMinuteDatapointMax = Math.max(lastMinuteDatapointMax, playerCount);
-        lastMinuteDatapointCount++;
-
-        if (inNextMinute(lastDatapointTimeMillis, currentTimeMillis)) {
+        // if we're in the next minute, report our existing data before we include the new data point.
+        if (lastDatapointTimeMillis > 0 && inNextMinute(lastDatapointTimeMillis, currentTimeMillis)) {
             reporter.reportPlayerCount(tickSource, now, lastMinuteDatapointCount,
                                        lastMinuteDatapointSum, lastMinuteDatapointMin, lastMinuteDatapointMax);
             lastMinuteDatapointCount = 0;
@@ -60,6 +54,13 @@ public class PlayerCountTracker {
             lastMinuteDatapointMin = Long.MAX_VALUE;
             lastMinuteDatapointMax = 0;
         }
+
+        // Yes, it's weird to sum up the player counts for each data point, but this gives us a proper average over
+        // the minute when we generate per-minute statistics.
+        lastMinuteDatapointSum += playerCount;
+        lastMinuteDatapointMin = Math.min(lastMinuteDatapointMin, playerCount);
+        lastMinuteDatapointMax = Math.max(lastMinuteDatapointMax, playerCount);
+        lastMinuteDatapointCount++;
 
         lastDatapointTimeMillis = currentTimeMillis;
     }

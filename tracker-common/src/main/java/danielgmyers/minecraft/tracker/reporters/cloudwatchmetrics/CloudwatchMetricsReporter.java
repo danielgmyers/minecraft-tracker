@@ -22,13 +22,11 @@ import java.util.concurrent.CompletableFuture;
 public class CloudwatchMetricsReporter implements StatsReporter {
 
     // visible for testing
-    static final String SECOND = ".second.";
     static final String MINUTE = ".minute.";
     static final String TICK_COUNT = "tick-count";
     static final String TICK_MILLIS = "tick-millis";
     static final String PLAYER_COUNT = "player-count";
 
-    static final int SECOND_STORAGE_RESOLUTION = 1;
     static final int MINUTE_STORAGE_RESOLUTION = 60;
 
     private static final Logger LOG = LogManager.getLogger();
@@ -55,19 +53,9 @@ public class CloudwatchMetricsReporter implements StatsReporter {
     }
 
     @Override
-    public void reportSecond(String tickSource, Instant timestamp, long tickCount,
-                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
-        if (!config.isPerSecondEnabled()) {
-            return;
-        }
-        LOG.error("Per-second reporting is not yet implemented!");
-        // TODO -- batch and submit to CW once per minute
-    }
-
-    @Override
-    public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
-                             long totalTickCount, long minTickCount, long maxTickCount,
-                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
+    public void reportTickStats(String tickSource, Instant timestamp, long secondsWithData,
+                                long totalTickCount, long minTickCount, long maxTickCount,
+                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
         // The CloudWatch SDK is not nice enough to do this for us.
         Instant timestampTruncated = timestamp.truncatedTo(ChronoUnit.MILLIS);
 
@@ -75,7 +63,7 @@ public class CloudwatchMetricsReporter implements StatsReporter {
         tickCount.storageResolution(MINUTE_STORAGE_RESOLUTION);
         tickCount.timestamp(timestampTruncated);
         tickCount.metricName(tickSource + MINUTE + TICK_COUNT);
-        tickCount.statisticValues(buildSet(datapointCount, totalTickCount, minTickCount, maxTickCount));
+        tickCount.statisticValues(buildSet(secondsWithData, totalTickCount, minTickCount, maxTickCount));
         tickCount.unit(StandardUnit.COUNT_SECOND);
 
         MetricDatum.Builder tickMillis = MetricDatum.builder();
@@ -91,7 +79,7 @@ public class CloudwatchMetricsReporter implements StatsReporter {
     }
 
     @Override
-    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+    public void reportPlayerCount(String tickSource, Instant timestamp, long secondsWithData,
                                   long playerCountSum, long minPlayerCount, long maxPlayerCount) {
         // The CloudWatch SDK is not nice enough to do this for us.
         Instant timestampTruncated = timestamp.truncatedTo(ChronoUnit.MILLIS);
@@ -100,7 +88,7 @@ public class CloudwatchMetricsReporter implements StatsReporter {
         playerCount.storageResolution(MINUTE_STORAGE_RESOLUTION);
         playerCount.timestamp(timestampTruncated);
         playerCount.metricName(tickSource + MINUTE + PLAYER_COUNT);
-        playerCount.statisticValues(buildSet(datapointCount, playerCountSum, minPlayerCount, maxPlayerCount));
+        playerCount.statisticValues(buildSet(secondsWithData, playerCountSum, minPlayerCount, maxPlayerCount));
         playerCount.unit(StandardUnit.COUNT);
 
         putMetric(playerCount.build());

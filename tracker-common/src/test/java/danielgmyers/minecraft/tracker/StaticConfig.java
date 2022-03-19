@@ -5,23 +5,31 @@ import danielgmyers.minecraft.tracker.config.ReporterType;
 
 public class StaticConfig implements Config {
 
-    private boolean perSecondEnabled;
     private ReporterType reporterType;
+    private String cloudwatchMetricNamespace;
 
-    public static StaticConfig create(boolean perSecondEnabled, ReporterType reporterType) {
+    public static StaticConfig create() {
         StaticConfig config = new StaticConfig();
-        config.perSecondEnabled = perSecondEnabled;
-        config.reporterType = reporterType;
+        config.reporterType = ReporterType.APPLICATION_LOG;
+        config.cloudwatchMetricNamespace = CLOUDWATCH_METRIC_NAMESPACE_DEFAULT;
         return config;
-    }
-
-    @Override
-    public boolean isPerSecondEnabled() {
-        return perSecondEnabled;
     }
 
     @Override
     public ReporterType getReporterType() {
         return reporterType;
+    }
+
+    public void setReporterType(ReporterType reporterType) {
+        this.reporterType = reporterType;
+    }
+
+    @Override
+    public String getCloudWatchMetricNamespace() {
+        return cloudwatchMetricNamespace;
+    }
+
+    public void setCloudwatchMetricNamespace(String cloudwatchMetricNamespace) {
+        this.cloudwatchMetricNamespace = cloudwatchMetricNamespace;
     }
 }

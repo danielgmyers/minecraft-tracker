@@ -2,7 +2,7 @@ package danielgmyers.minecraft.tracker;
 
 import java.time.Instant;
 
-public class MinutePlayerCountStatsBlock {
+public class PlayerCountStatsBlock {
     public final String tickSource;
     public final Instant timestamp;
     public final long datapointCount;
@@ -10,8 +10,8 @@ public class MinutePlayerCountStatsBlock {
     public final long minPlayerCount;
     public final long maxPlayerCount;
 
-    public MinutePlayerCountStatsBlock(String tickSource, Instant timestamp, long datapointCount,
-                                       long playerCountSum, long minPlayerCount, long maxPlayerCount) {
+    public PlayerCountStatsBlock(String tickSource, Instant timestamp, long datapointCount,
+                                 long playerCountSum, long minPlayerCount, long maxPlayerCount) {
         this.tickSource = tickSource;
         this.timestamp = timestamp;
         this.datapointCount = datapointCount;

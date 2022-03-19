@@ -46,10 +46,6 @@ public class TrackerForge {
             return;
         }
 
-        if (config.isPerSecondEnabled()) {
-            LOGGER.warn("Per-second reporting is enabled, this may affect performance.");
-        }
-
         statsReporter = StatsReporterFactory.create(config, Clock.systemUTC());
         this.serverTickTracker = new TickStatsTracker("server", config, statsReporter, Clock.systemUTC());
         this.playerCountTracker = new PlayerCountTracker("server", config, statsReporter, Clock.systemUTC());

@@ -36,7 +36,6 @@ public class PropertiesConfig implements Config {
 
     private void saveDefaults(File configFile) {
         properties.clear();
-        properties.setProperty(PER_SECOND_ENABLED, PER_SECOND_ENABLED_DEFAULT.toString());
         properties.setProperty(REPORTER_TYPE, REPORTER_TYPE_DEFAULT.toString());
         properties.setProperty(CLOUDWATCH_METRIC_NAMESPACE, CLOUDWATCH_METRIC_NAMESPACE_DEFAULT);
         try (FileWriter writer = new FileWriter(configFile)) {

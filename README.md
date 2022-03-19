@@ -22,8 +22,6 @@ When the server is first started, the mod will create a configuration file named
 
 Again, the default is **NONE** which means if you don't change it, no data will be tracked!
 
-`per-second-metrics-enabled` - When set to true, the server will generate performance statistics once per second. This level of detail is typically not useful and may degrade server performance. The default is **false**.
-
 `cloudwatch-metric-namespace` - When using the CLOUDWATCH_DIRECT reporter type, this configures the metrics namespace that the metrics will be stored in. Note that Amazon CloudWatch disallows namespace names that begin with "AWS". The default is **minecraft-tracker**.
 
 ## Reporting Modes

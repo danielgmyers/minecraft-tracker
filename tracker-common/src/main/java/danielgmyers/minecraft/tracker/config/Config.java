@@ -4,8 +4,6 @@ import java.util.EnumSet;
 
 public interface Config {
 
-    String PER_SECOND_ENABLED = "per-second-metrics-enabled";
-    Boolean PER_SECOND_ENABLED_DEFAULT = false;
     String REPORTER_TYPE = "reporter-type";
     ReporterType REPORTER_TYPE_DEFAULT = ReporterType.NONE;
 
@@ -39,10 +37,6 @@ public interface Config {
 
     default boolean isEnabled() {
         return getReporterType() != ReporterType.NONE;
-    }
-
-    default boolean isPerSecondEnabled() {
-        return retrieveBoolean(PER_SECOND_ENABLED, PER_SECOND_ENABLED_DEFAULT);
     }
 
     default ReporterType getReporterType() {

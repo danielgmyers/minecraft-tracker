@@ -20,22 +20,14 @@ public final class StatsReporterFactory {
                 // we'll hand back a no-op reporter in this case.
                 return new StatsReporter() {
                     @Override
-                    public void reportSecond(String tickSource, Instant timestamp, long tickCount,
-                                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
-
+                    public void reportTickStats(String tickSource, Instant timestamp, long secondsWithData,
+                                                long totalTickCount, long minTickCount, long maxTickCount,
+                                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
                     }
 
                     @Override
-                    public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
-                                             long totalTickCount, long minTickCount, long maxTickCount,
-                                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
-
-                    }
-
-                    @Override
-                    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+                    public void reportPlayerCount(String tickSource, Instant timestamp, long secondsWithData,
                                                   long playerCountSum, long minPlayerCount, long maxPlayerCount) {
-
                     }
                 };
             case APPLICATION_LOG:

@@ -70,11 +70,6 @@ public class TickStatsTracker {
         // we use the tick start times to figure out if we're in the next second, so that
         // variable-duration ticks don't confuse us
         if (inNextSecond(previousTickStartTimeMillis, currentTickStartTimeMillis) && tickCountThisSecond > 0) {
-            if (config.isPerSecondEnabled()) {
-                reporter.reportSecond(tickSource, now, tickCountThisSecond,
-                                      totalTickMillisThisSecond, minTickMillisThisSecond, maxTickMillisThisSecond);
-            }
-
             secondsMeasuredThisMinute++;
             totalTickCountThisMinute += tickCountThisSecond;
             minTickCountThisMinute = Math.min(minTickCountThisMinute, tickCountThisSecond);
@@ -90,7 +85,7 @@ public class TickStatsTracker {
             maxTickMillisThisSecond = 0;
 
             if (inNextMinute(previousTickStartTimeMillis, currentTickStartTimeMillis)) {
-                reporter.reportMinute(tickSource, now, secondsMeasuredThisMinute,
+                reporter.reportTickStats(tickSource, now, secondsMeasuredThisMinute,
                                       totalTickCountThisMinute, minTickCountThisMinute, maxTickCountThisMinute,
                                       totalTickMillisThisMinute, minTickMillisThisMinute, maxTickMillisThisMinute);
 
@@ -123,7 +118,7 @@ public class TickStatsTracker {
     }
 
     private boolean inNextMinute(long previousTimeMillis, long currentTimeMillis) {
-        // this won't line up with wall-clock minutes, but that's ok, we just need consistent 60-second windows.
+        // this may not line up with wall-clock minutes, but that's ok, we just need consistent 60-second windows.
         return (previousTimeMillis / 60000) < (currentTimeMillis / 60000);
     }
 }

@@ -1,193 +1,171 @@
 package danielgmyers.minecraft.tracker;
 
-import danielgmyers.minecraft.tracker.config.Config;
-import danielgmyers.minecraft.tracker.config.ReporterType;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 
 public class TickStatsTrackerTest {
 
-    @Test
-    public void testInitialization() {
-        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
+    private static final String TICK_SOURCE = "test-tick-source";
+
+    private TestClock clock;
+
+    @BeforeEach
+    public void setupClock() {
+        // set up the clock so that it's clamped to the beginning of the current minute.
+        // this will make sure we're able to consistently test crossing minute boundaries.
+        Instant startTime = Instant.now().with(ChronoField.NANO_OF_SECOND, 0);
+        LocalDateTime ldt = LocalDateTime.ofInstant(startTime, ZoneId.systemDefault());
+        startTime = startTime.minusSeconds(ldt.getSecond());
+        clock = new TestClock(startTime);
     }
 
     @Test
-    public void testConstantTickTimesForOneSecond() {
+    public void testConstantTickTimesForOneMinute() {
         InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
+        StaticConfig testConfig = StaticConfig.create();
+        TickStatsTracker tracker = new TickStatsTracker(TICK_SOURCE, testConfig, reporter, clock);
 
         // 20 ticks in 1 second allows 50ms per tick.
         // In practice, ticks often take less time than that, where the game waits a while
         // to start the next tick.
 
         // For this test, we'll have each tick take 5ms, and a 45ms gap between ticks.
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 20 * 60; i++) {
             doTick(tracker, clock, 5, 45);
         }
 
-        // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
+        // we shouldn't have any reported stats yet, the minute needs to tick over
+        Assertions.assertTrue(reporter.getTickStats().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         tracker.startTick();
+        clock.forward(Duration.ofMillis(5)); // let's say this tick took 5ms, shouldn't affect the stats
         tracker.endTick();
 
-        // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
+        // now that a minute has passed we should have a stats block
+        Assertions.assertFalse(reporter.getTickStats().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getTickStats().size());
+        TickStatsBlock block = reporter.getTickStats().get(0);
 
-        Assertions.assertEquals(20, block.tickCount);
+        Assertions.assertEquals(TICK_SOURCE, block.tickSource);
+
+        // the tracker should have used the timestamp of the end tick, which is now
+        Assertions.assertEquals(clock.instant(), block.timestamp);
+
+        Assertions.assertEquals(60, block.secondsWithData);
+
+        Assertions.assertEquals(20 * 60, block.totalTickCount);
+        Assertions.assertEquals(20, block.minTickCount);
+        Assertions.assertEquals(20, block.maxTickCount);
+
+        Assertions.assertEquals(20 * 5 * 60, block.totalTickMillis);
         Assertions.assertEquals(5, block.minTickMillis);
-        Assertions.assertEquals(20 * 5, block.totalTickMillis);
         Assertions.assertEquals(5, block.maxTickMillis);
     }
 
     @Test
-    public void testRespectsPerSecondStatsConfig() {
+    public void testVariableTickTimesForOneMinute() {
         InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(false, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
+        StaticConfig testConfig = StaticConfig.create();
+        TickStatsTracker tracker = new TickStatsTracker(TICK_SOURCE, testConfig, reporter, clock);
 
-        // 20 ticks in 1 second allows 50ms per tick.
-        // In practice, ticks often take less time than that, where the game waits a while
-        // to start the next tick.
-
-        // For this test, we'll have each tick take 5ms, and a 45ms gap between ticks.
-        for (int i = 0; i < 20; i++) {
-            doTick(tracker, clock, 5, 45);
-        }
-
-        // we normally wouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
-
-        // We need to trigger another tick so the stats would emitted if they're enabled
-        tracker.startTick();
-        tracker.endTick();
-
-        // since per-second stats are disabled, we should still have no reported per-second stats.
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
-    }
-
-    @Test
-    public void testVariableTickTimesForOneSecond() {
-        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
-
-        // For this test, we'll have two ticks take 5ms, sixteen ticks take 10ms,
+        // For this test, for each second we'll have two ticks take 5ms, sixteen ticks take 10ms,
         // and two more ticks take 15ms.
         int totalTickTime = 0;
-        for (int i = 0; i < 2; i++) {
-            doTick(tracker, clock, 5, 45);
-            totalTickTime += 5;
-        }
-        for (int i = 0; i < 16; i++) {
-            doTick(tracker, clock, 10, 40);
-            totalTickTime += 10;
-        }
-        for (int i = 0; i < 2; i++) {
-            doTick(tracker, clock, 15, 35);
-            totalTickTime += 15;
+        for (int j = 0; j < 60; j++) {
+            for (int i = 0; i < 2; i++) {
+                doTick(tracker, clock, 5, 45);
+                totalTickTime += 5;
+            }
+            for (int i = 0; i < 16; i++) {
+                doTick(tracker, clock, 10, 40);
+                totalTickTime += 10;
+            }
+            for (int i = 0; i < 2; i++) {
+                doTick(tracker, clock, 15, 35);
+                totalTickTime += 15;
+            }
         }
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getTickStats().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
         tracker.startTick();
+        clock.forward(Duration.ofMillis(5)); // let's say this tick took 5ms, shouldn't affect the stats
         tracker.endTick();
 
-        // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
+        // now that the minute has passed we should have a stats block
+        Assertions.assertFalse(reporter.getTickStats().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getTickStats().size());
+        TickStatsBlock block = reporter.getTickStats().get(0);
 
-        Assertions.assertEquals(20, block.tickCount);
+        Assertions.assertEquals(TICK_SOURCE, block.tickSource);
+
+        // the tracker should have used the timestamp of the end tick, which is now
+        Assertions.assertEquals(clock.instant(), block.timestamp);
+
+        Assertions.assertEquals(60, block.secondsWithData);
+
+        Assertions.assertEquals(20 * 60, block.totalTickCount);
+        Assertions.assertEquals(20, block.minTickCount);
+        Assertions.assertEquals(20, block.maxTickCount);
+
+        Assertions.assertEquals(20 * 10 * 60, block.totalTickMillis);
         Assertions.assertEquals(5, block.minTickMillis);
-        Assertions.assertEquals(totalTickTime, block.totalTickMillis);
         Assertions.assertEquals(15, block.maxTickMillis);
     }
 
     @Test
     public void testEndTickBeforeStartTick() {
         InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
+        StaticConfig testConfig = StaticConfig.create();
+        TickStatsTracker tracker = new TickStatsTracker(TICK_SOURCE, testConfig, reporter, clock);
 
         // This shouldn't cause an exception, and the subsequent tick should have data.
         tracker.endTick();
 
         // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
+        Assertions.assertTrue(reporter.getTickStats().isEmpty());
 
         // We need to trigger another tick so the stats get emitted
-        clock.forward(Duration.ofSeconds(1));
+        clock.forward(Duration.ofSeconds(60));
         tracker.startTick();
+        clock.forward(Duration.ofMillis(5));
         tracker.endTick();
 
-        // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
+        // now that a minute has passed we should have a stats block
+        Assertions.assertFalse(reporter.getTickStats().isEmpty());
 
-        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
+        Assertions.assertEquals(1, reporter.getTickStats().size());
+        TickStatsBlock block = reporter.getTickStats().get(0);
 
-        // we should only have one data point for that second, a zero-second tick.
-        Assertions.assertEquals(1, block.tickCount);
-        Assertions.assertEquals(0, block.minTickMillis);
+        Assertions.assertEquals(TICK_SOURCE, block.tickSource);
+
+        // the tracker should have used the timestamp of the end tick, which is now
+        Assertions.assertEquals(clock.instant(), block.timestamp);
+
+        // we should see a single zero-duration tick
+        Assertions.assertEquals(1, block.secondsWithData);
+
+        Assertions.assertEquals(1, block.totalTickCount);
+        Assertions.assertEquals(1, block.minTickCount);
+        Assertions.assertEquals(1, block.maxTickCount);
+
         Assertions.assertEquals(0, block.totalTickMillis);
+        Assertions.assertEquals(0, block.minTickMillis);
         Assertions.assertEquals(0, block.maxTickMillis);
     }
 
-    @Test
-    public void testManyTicksInOneSecond() {
-        InMemoryStatsReporter reporter = new InMemoryStatsReporter();
-        TestClock clock = new TestClock(Instant.now().with(ChronoField.NANO_OF_SECOND, 0));
-        Config testConfig = StaticConfig.create(true, ReporterType.APPLICATION_LOG);
-        TickStatsTracker tracker = new TickStatsTracker("test", testConfig, reporter, clock);
-
-        // For this test, we'll have each tick take 1ms, with a 1ms gap between ticks.
-        // That's room for 500 ticks in one second
-        // This simulates the game running significantly more ticks than usual.
-        long tickCount = 400;
-        for (int i = 0; i < tickCount; i++) {
-            doTick(tracker, clock, 1, 1);
-        }
-
-        // we shouldn't have any reported stats yet, the second needs to tick over
-        Assertions.assertTrue(reporter.getSecondTickBlocks().isEmpty());
-
-        // We need to trigger another tick so the stats get emitted
-        clock.forward(Duration.ofSeconds(1));
-        tracker.startTick();
-        tracker.endTick();
-
-        // now that second has passed we should have a stats block
-        Assertions.assertFalse(reporter.getSecondTickBlocks().isEmpty());
-
-        Assertions.assertEquals(1, reporter.getSecondTickBlocks().size());
-        SecondTickStatsBlock block = reporter.getSecondTickBlocks().get(0);
-
-        Assertions.assertEquals(tickCount, block.tickCount);
-        Assertions.assertEquals(1, block.minTickMillis);
-        Assertions.assertEquals(400, block.totalTickMillis);
-        Assertions.assertEquals(1, block.maxTickMillis);
-    }
 
     private void doTick(TickStatsTracker tracker, TestClock clock, long tickMillis, long postTickWaitMillis) {
         tracker.startTick();

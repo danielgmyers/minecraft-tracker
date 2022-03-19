@@ -17,32 +17,22 @@ public class LoggingReporter implements StatsReporter {
     }
 
     @Override
-    public void reportSecond(String tickSource, Instant timestamp,
-                             long tickCount, long totalTickMillis, long minTickMillis, long maxTickMillis) {
-        if (config.isPerSecondEnabled()) {
-            long avgTickMillis = totalTickMillis / tickCount;
-            LOG.info("Last second {} stats: {} ticks. Durations: {}ms (min), {}ms (avg), {}ms (max).",
-                     tickSource, tickCount, minTickMillis, avgTickMillis, maxTickMillis);
-        }
-    }
-
-    @Override
-    public void reportMinute(String tickSource, Instant timestamp, long datapointCount,
-                             long totalTickCount, long minTickCount, long maxTickCount,
-                             long totalTickMillis, long minTickMillis, long maxTickMillis) {
-        long avgTickCount = totalTickCount / datapointCount;
-        long avgTickMillis = totalTickMillis / datapointCount;
+    public void reportTickStats(String tickSource, Instant timestamp, long secondsWithData,
+                                long totalTickCount, long minTickCount, long maxTickCount,
+                                long totalTickMillis, long minTickMillis, long maxTickMillis) {
+        long avgTickCount = totalTickCount / secondsWithData;
+        long avgTickMillis = totalTickMillis / secondsWithData;
         LOG.info("Last minute {} stats: {} data points. TPS: {} (min), {} (avg), {} (max). Tick durations: {} ms (min), {} ms (avg), {} ms (max).",
-                 tickSource, datapointCount,
+                 tickSource, secondsWithData,
                  minTickCount, avgTickCount, maxTickCount,
                  minTickMillis, avgTickMillis, maxTickMillis);
     }
 
     @Override
-    public void reportPlayerCount(String tickSource, Instant timestamp, long datapointCount,
+    public void reportPlayerCount(String tickSource, Instant timestamp, long secondsWithData,
                                   long playerCountSum, long minPlayerCount, long maxPlayerCount) {
-        long avgPlayerCount = playerCountSum / datapointCount;
+        long avgPlayerCount = playerCountSum / secondsWithData;
         LOG.info("Last minute {} player counts: {} data points. {} (min), {} (avg), {} (max).",
-                 tickSource, datapointCount, minPlayerCount, avgPlayerCount, maxPlayerCount);
+                 tickSource, secondsWithData, minPlayerCount, avgPlayerCount, maxPlayerCount);
     }
 }
