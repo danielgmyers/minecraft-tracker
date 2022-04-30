@@ -16,5 +16,6 @@ rootProject.name = 'tracker'
 include (
         'tracker-common',
         'tracker-fabric',
-        'tracker-forge'
+        'tracker-forge',
+        'tracker-forge-1.16.5'
 )

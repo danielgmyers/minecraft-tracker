@@ -85,9 +85,12 @@ public class TickStatsTracker {
             maxTickMillisThisSecond = 0;
 
             if (inNextMinute(previousTickStartTimeMillis, currentTickStartTimeMillis)) {
-                reporter.reportTickStats(tickSource, now, secondsMeasuredThisMinute,
-                                      totalTickCountThisMinute, minTickCountThisMinute, maxTickCountThisMinute,
-                                      totalTickMillisThisMinute, minTickMillisThisMinute, maxTickMillisThisMinute);
+                // the timestamp we use for this datapoint should be the end time of the previous tick,
+                // since 'now' is in the next minute.
+                reporter.reportTickStats(tickSource, Instant.ofEpochMilli(previousTickEndTimeMillis),
+                                         secondsMeasuredThisMinute,
+                                         totalTickCountThisMinute, minTickCountThisMinute, maxTickCountThisMinute,
+                                         totalTickMillisThisMinute, minTickMillisThisMinute, maxTickMillisThisMinute);
 
                 secondsMeasuredThisMinute = 0;
 
@@ -101,7 +104,7 @@ public class TickStatsTracker {
             }
         }
 
-        // finally, we add the current tick's duration to the tick duration queue.
+        // finally, we add the current tick to the tick duration data.
         long currentTickDurationMillis = currentTickEndTimeMillis - currentTickStartTimeMillis;
 
         tickCountThisSecond++;

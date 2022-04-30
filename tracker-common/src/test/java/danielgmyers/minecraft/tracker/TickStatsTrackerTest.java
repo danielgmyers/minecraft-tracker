@@ -36,9 +36,10 @@ public class TickStatsTrackerTest {
         // In practice, ticks often take less time than that, where the game waits a while
         // to start the next tick.
 
+        Instant previousEndTickTime = null;
         // For this test, we'll have each tick take 5ms, and a 45ms gap between ticks.
         for (int i = 0; i < 20 * 60; i++) {
-            doTick(tracker, clock, 5, 45);
+            previousEndTickTime = doTick(tracker, clock, 5, 45);
         }
 
         // we shouldn't have any reported stats yet, the minute needs to tick over
@@ -57,8 +58,8 @@ public class TickStatsTrackerTest {
 
         Assertions.assertEquals(TICK_SOURCE, block.tickSource);
 
-        // the tracker should have used the timestamp of the end tick, which is now
-        Assertions.assertEquals(clock.instant(), block.timestamp);
+        // the tracker should have used the timestamp of the _previous_ end tick, which is previousEndTickTime
+        Assertions.assertEquals(previousEndTickTime, block.timestamp);
 
         Assertions.assertEquals(60, block.secondsWithData);
 
@@ -77,6 +78,7 @@ public class TickStatsTrackerTest {
         StaticConfig testConfig = StaticConfig.create();
         TickStatsTracker tracker = new TickStatsTracker(TICK_SOURCE, testConfig, reporter, clock);
 
+        Instant previousEndTickTime = null;
         // For this test, for each second we'll have two ticks take 5ms, sixteen ticks take 10ms,
         // and two more ticks take 15ms.
         int totalTickTime = 0;
@@ -90,7 +92,7 @@ public class TickStatsTrackerTest {
                 totalTickTime += 10;
             }
             for (int i = 0; i < 2; i++) {
-                doTick(tracker, clock, 15, 35);
+                previousEndTickTime = doTick(tracker, clock, 15, 35);
                 totalTickTime += 15;
             }
         }
@@ -111,8 +113,8 @@ public class TickStatsTrackerTest {
 
         Assertions.assertEquals(TICK_SOURCE, block.tickSource);
 
-        // the tracker should have used the timestamp of the end tick, which is now
-        Assertions.assertEquals(clock.instant(), block.timestamp);
+        // the tracker should have used the timestamp of the _previous_ end tick, which is previousEndTickTime
+        Assertions.assertEquals(previousEndTickTime, block.timestamp);
 
         Assertions.assertEquals(60, block.secondsWithData);
 
@@ -133,6 +135,7 @@ public class TickStatsTrackerTest {
 
         // This shouldn't cause an exception, and the subsequent tick should have data.
         tracker.endTick();
+        Instant previousEndTickTime = clock.instant();
 
         // we shouldn't have any reported stats yet, the second needs to tick over
         Assertions.assertTrue(reporter.getTickStats().isEmpty());
@@ -151,8 +154,8 @@ public class TickStatsTrackerTest {
 
         Assertions.assertEquals(TICK_SOURCE, block.tickSource);
 
-        // the tracker should have used the timestamp of the end tick, which is now
-        Assertions.assertEquals(clock.instant(), block.timestamp);
+        // the tracker should have used the timestamp of the _previous_ end tick, which is previousEndTickTime
+        Assertions.assertEquals(previousEndTickTime, block.timestamp);
 
         // we should see a single zero-duration tick
         Assertions.assertEquals(1, block.secondsWithData);
@@ -167,12 +170,17 @@ public class TickStatsTrackerTest {
     }
 
 
-    private void doTick(TickStatsTracker tracker, TestClock clock, long tickMillis, long postTickWaitMillis) {
+    /**
+     * Returns the timestamp of the endTick call
+     */
+    private Instant doTick(TickStatsTracker tracker, TestClock clock, long tickMillis, long postTickWaitMillis) {
         tracker.startTick();
         clock.forward(Duration.ofMillis(tickMillis));
         tracker.endTick();
+        Instant endTickTime = clock.instant();
         if (postTickWaitMillis > 0) {
             clock.forward(Duration.ofMillis(postTickWaitMillis));
         }
+        return endTickTime;
     }
 }
