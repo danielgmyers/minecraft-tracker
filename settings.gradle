@@ -17,5 +17,6 @@ include (
         'tracker-common',
         'tracker-fabric',
         'tracker-forge-1.16.5',
-        'tracker-forge-1.18'
+        'tracker-forge-1.18',
+        'tracker-forge-1.19'
 )
