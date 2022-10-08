@@ -17,6 +17,7 @@ version = parent.version
 
 def minecraft_version = '1.18.1'
 def next_minecraft_minor_version = '1.19'
+def fml_version = '39'
 def forge_version = '39.0.0'
 
 apply plugin: 'net.minecraftforge.gradle'
@@ -106,6 +107,7 @@ processResources {
         include 'META-INF/mods.toml'
         expand (
                 'version': project.version,
+                'fml_version': fml_version,
                 'forge_version': forge_version,
                 'minecraft_version': minecraft_version,
                 'next_minecraft_minor_version': next_minecraft_minor_version
