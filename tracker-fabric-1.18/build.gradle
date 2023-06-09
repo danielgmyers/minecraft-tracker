@@ -1,0 +1,67 @@
+import net.fabricmc.loom.task.RemapJarTask
+
+plugins {
+    id 'fabric-loom' version '1.2-SNAPSHOT'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+archivesBaseName = 'tracker-fabric-1.18'
+version = parent.version
+
+tasks.register('run-fabric-client') {
+    dependsOn 'runClient'
+}
+
+repositories {
+    maven { url 'https://maven.fabricmc.net/' }
+}
+
+configurations {
+    shade
+    implementation.extendsFrom shade
+}
+
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // Fabric API. This is technically optional, but you probably want it anyway.
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    shade project(':tracker-common')
+
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-core:2.17.1'
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+shadowJar {
+    archiveBaseName.set(project.archivesBaseName)
+    archiveClassifier.set('shadowed')
+    archiveVersion.set(project.version)
+
+    configurations = [project.configurations.shade]
+
+    exclude 'META-INF/maven/**'
+
+    dependencies {
+        exclude(dependency('org.apache.logging.log4j::'))
+    }
+}
+
+task remappedShadowJar(type: RemapJarTask) {
+    dependsOn tasks.shadowJar
+    input = tasks.shadowJar.archiveFile
+    addNestedDependencies = true
+    archiveFileName = "${project.archivesBaseName}-${project.version}-release.jar"
+}
+
+tasks.build.dependsOn remappedShadowJar

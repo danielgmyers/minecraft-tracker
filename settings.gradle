@@ -15,7 +15,8 @@ pluginManagement {
 rootProject.name = 'tracker'
 include (
         'tracker-common',
-        'tracker-fabric',
+        'tracker-fabric-1.18',
+        'tracker-fabric-1.20',
         'tracker-forge-1.16.5',
         'tracker-forge-1.18',
         'tracker-forge-1.19'

@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.+', changing: true
     }
 }
 
@@ -113,26 +113,28 @@ processResources {
                 'next_minecraft_minor_version': next_minecraft_minor_version
         )
     }
-
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'META-INF/mods.toml'
-    }
 }
 
 shadowJar {
     archiveBaseName.set("tracker-forge-${minecraft_version}")
     archiveVersion.set("${project.version}")
-    archiveClassifier.set('shadowed')
+    archiveClassifier.set('release')
 
     configurations = [project.configurations.shade]
 
     exclude 'module-info.class'
+
+    // Several of our dependencies litter some stuff in here we don't need
     exclude 'META-INF/maven/**'
+    exclude 'META-INF/versions/**/*'
+    exclude '**/module-info.class'
+    exclude 'mozilla/**'
+    exclude 'mime.types'
+    exclude 'VersionInfo.java'
 
     dependencies {
         exclude(dependency('commons-codec::'))
         exclude(dependency('commons-logging::'))
-        exclude(dependency('io.netty::'))
         exclude(dependency('org.apache.httpcomponents::'))
         exclude(dependency('org.apache.logging.log4j::'))
         exclude(dependency('org.slf4j::'))

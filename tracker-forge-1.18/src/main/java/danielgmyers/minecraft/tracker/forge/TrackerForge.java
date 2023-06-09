@@ -9,8 +9,12 @@ import danielgmyers.minecraft.tracker.reporters.StatsReporter;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.IExtensionPoint;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.network.NetworkConstants;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -53,6 +57,10 @@ public class TrackerForge {
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
 
+        // Make sure the server doesn't show this mod as required on the client side
+        ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class,
+                                                       () -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY,
+                                                                                             (a, b) -> true));
     }
 
     @SubscribeEvent
@@ -73,6 +81,13 @@ public class TrackerForge {
     @SubscribeEvent
     public void onWorldTick(final TickEvent.WorldTickEvent event) {
         String dimension = event.world.dimension().location().toString();
+
+        // TODO -- make this configurable
+        // Vault Hunters generates unique dimensions for each vault run, making these metrics hard to use.
+        // We'll coalesce any dimensions that start with "the_vault:vault_", "the_vault:arena_", or "the_vault:the_other_side_"
+        // to "the_vault:vault", "the_vault:arena", or "the_vault:the_other_side", respectively.
+        dimension = trimNameIfTemporaryVaultDimension(dimension);
+
         TickStatsTracker trackerForDimension = worldTickTracker.computeIfAbsent(dimension,
                     (d) -> new TickStatsTracker(d, config, statsReporter, Clock.systemUTC()));
         if (event.phase == TickEvent.Phase.START) {
@@ -84,5 +99,16 @@ public class TrackerForge {
                     (d) -> new PlayerCountTracker(d, config, statsReporter, Clock.systemUTC()));
             playerCountTracker.update(event.world.players().size());
         }
+    }
+
+    private String trimNameIfTemporaryVaultDimension(String dimension) {
+        if (dimension.startsWith("the_vault:vault_")) {
+            return "the_vault:vault";
+        } else if (dimension.startsWith("the_vault:arena_")) {
+            return "the_vault:arena";
+        } else if (dimension.startsWith("the_vault:the_other_side_")) {
+            return "the_vault:the_other_side";
+        }
+        return dimension;
     }
 }

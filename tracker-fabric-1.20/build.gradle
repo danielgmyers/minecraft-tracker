@@ -1,11 +1,11 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id 'fabric-loom' version '0.10-SNAPSHOT'
+    id 'fabric-loom' version '1.2-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
-archivesBaseName = 'tracker-fabric'
+archivesBaseName = 'tracker-fabric-1.20'
 version = parent.version
 
 tasks.register('run-fabric-client') {
@@ -36,10 +36,12 @@ dependencies {
 }
 
 processResources {
-    inputs.property "version", project.version
-
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand (
+            "version": project.version,
+            "loader_version": project.loader_version,
+            "minecraft_version": project.minecraft_version,
+        )
     }
 }
 
